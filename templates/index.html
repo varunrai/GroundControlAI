@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GroundControlAI — Mission Control for AI Coding Agents</title>
+    <link rel="icon" type="image/png" href="/assets/icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans p-6 md:p-8 min-h-screen">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-800">
+            <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 rounded-2xl overflow-hidden shadow-lg shadow-cyan-500/20 border border-cyan-500/30 bg-slate-900 flex-shrink-0">
+                    <img src="/assets/icon.png" alt="GroundControlAI Icon" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">
+                        <span class="text-white">GroundControl</span><span class="bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">AI</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 mt-0.5">Mission Control for AI Coding Agents • Telemetry • Token Economics • SRE</p>
+                </div>
+                <span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-semibold shadow-sm animate-pulse">
+                    ● Live Inotify Watcher
+                </span>
+            </div>
+
+            <!-- Search Bar -->
+            <form method="GET" action="/" class="flex gap-2">
+                {% if selected_agent %}
+                <input type="hidden" name="agent" value="{{ selected_agent }}">
+                {% endif %}
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        value="{{ query or '' }}" 
+                        placeholder="Search commands, files, text..." 
+                        class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64 shadow-sm"
+                    >
+                </div>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">
+                    Search
+                </button>
+                {% if query %}
+                <a href="/{% if selected_agent %}?agent={{ selected_agent }}{% endif %}" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if error %}
+            <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <!-- Global Observability Cockpit Telemetry Deck: 2 Columns (Col 1: Economics, Col 2: 3 Stacked Rows) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            
+            <!-- Column 1 (span 5): Token & Cost Economics -->
+            <div class="lg:col-span-5 flex flex-col">
+                <div x-data="{ showRates: false }" class="h-full bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-lg relative overflow-hidden backdrop-blur-sm flex flex-col justify-between">
+                    <div class="absolute -right-4 -bottom-4 opacity-5 text-9xl font-mono text-emerald-400 select-none">$</div>
+                    
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Token & Cost Economics</span>
+                                <button @click="showRates = true" class="text-xs text-slate-400 hover:text-indigo-400 transition-colors" title="View pricing methodology & rate card">ⓘ</button>
+                            </div>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                                +${{ "%.2f"|format(cockpit_stats.cache_savings or 0.0) }} saved
+                            </span>
+                        </div>
+
+                        <div class="mt-2">
+                            <div class="text-xs text-slate-400">Total Estimated Spend</div>
+                            <div class="text-4xl font-extrabold text-slate-100 tracking-tight mt-0.5">
+                                ${{ "%.2f"|format(cockpit_stats.total_spend or 0.0) }}
+                            </div>
+                        </div>
+
+                        <div class="mt-5 space-y-2.5 text-xs text-slate-400">
+                            <div class="flex justify-between items-center py-1.5 border-b border-slate-700/40">
+                                <span>Cache Hit Ratio:</span>
+                                <span class="font-bold text-emerald-400 font-mono text-sm">{{ cockpit_stats.cache_hit_pct or 0 }}%</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5 border-b border-slate-700/40">
+                                <span>Prompt / Completion:</span>
+                                <span class="font-mono text-slate-200">{{ "{:,}".format(cockpit_stats.prompt_tokens or 0) }} / {{ "{:,}".format(cockpit_stats.completion_tokens or 0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5 border-b border-slate-700/40">
+                                <span>Cached Input Read:</span>
+                                <span class="font-mono text-emerald-300 font-semibold">{{ "{:,}".format(cockpit_stats.cache_read_tokens or 0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5">
+                                <span>Thinking Tokens:</span>
+                                <span class="font-mono text-indigo-300 font-semibold">{{ "{:,}".format(cockpit_stats.thinking_tokens or 0) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Anthropic • Moonshot • Gemini</span>
+                        <button @click="showRates = true" class="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+                            View Rate Card & Methodology →
+                        </button>
+                    </div>
+
+                    <!-- Rate Card & Methodology Modal -->
+                    <div x-show="showRates" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" @click.self="showRates = false">
+                        <div class="bg-slate-850 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-left">
+                            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                                    <span>💰</span> Pricing Methodology & Rate Card
+                                </h3>
+                                <button @click="showRates = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+                            </div>
+                            
+                            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                                <p class="text-slate-400">
+                                    Costs are calculated per model turn using standard API pricing rates (per 1,000,000 tokens):
+                                </p>
+                                
+                                <table class="w-full text-left font-mono text-[11px] border border-slate-700 rounded-lg overflow-hidden">
+                                    <thead class="bg-slate-900 text-slate-400 border-b border-slate-700">
+                                        <tr>
+                                            <th class="p-2">Model</th>
+                                            <th class="p-2">Input</th>
+                                            <th class="p-2">Cache Read</th>
+                                            <th class="p-2">Output</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        <tr><td class="p-2 text-indigo-400 font-bold">Claude Sonnet 5</td><td class="p-2">$3.00</td><td class="p-2 text-emerald-400">$0.30</td><td class="p-2">$15.00</td></tr>
+                                        <tr><td class="p-2 text-indigo-400 font-bold">Claude Opus 4</td><td class="p-2">$15.00</td><td class="p-2 text-emerald-400">$1.50</td><td class="p-2">$75.00</td></tr>
+                                        <tr><td class="p-2 text-indigo400 font-bold">Claude Haiku</td><td class="p-2">$0.80</td><td class="p-2 text-emerald-400">$0.08</td><td class="p-2">$4.00</td></tr>
+                                        <tr><td class="p-2 text-emerald-400 font-bold">Kimi K3 (256k)</td><td class="p-2">$0.70</td><td class="p-2 text-emerald-400">$0.10</td><td class="p-2">$2.00</td></tr>
+                                        <tr><td class="p-2 text-purple-400 font-bold">Gemini 2.5 Pro</td><td class="p-2">$1.25</td><td class="p-2 text-emerald-400">$0.30</td><td class="p-2">$5.00</td></tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700/60 space-y-1 font-mono text-[11px]">
+                                    <p class="text-indigo-400 font-bold">Formulas:</p>
+                                    <p>• Cost = (Input/1M × Rate) + (CacheRead/1M × Rate_cr) + (Output/1M × Rate_out)</p>
+                                    <p>• Savings = (CacheRead/1M) × (Rate_input - Rate_cache_read)</p>
+                                </div>
+
+                                <p class="text-slate-400">
+                                    💡 <strong class="text-slate-200">Why savings are high:</strong> Claude and Kimi leverage prompt caching on conversation history. Cache reads are discounted by <strong class="text-emerald-400">90%</strong> compared to raw input tokens ($0.30 vs $3.00 per 1M tokens), saving thousands of dollars across multi-turn sessions.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2 (span 7): 3 Stacked Rows for Performance, Reliability & Fleet -->
+            <div class="lg:col-span-7 flex flex-col justify-between gap-4">
+                
+                <!-- Row 1: SRE Latency & Performance -->
+                <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg relative overflow-hidden backdrop-blur-sm flex items-center justify-between">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-6xl font-mono text-cyan-400 select-none">⚡</div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Performance & Latency</span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                                P90 TTFT
+                            </span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-extrabold text-cyan-300">{{ cockpit_stats.avg_ttft_ms or 0 }}</span>
+                            <span class="text-xs font-normal text-slate-400">ms avg response</span>
+                        </div>
+                    </div>
+                    <div class="text-right text-xs text-slate-400 space-y-1 z-10 font-mono">
+                        <div>Streaming: <span class="text-cyan-400 font-bold">{{ cockpit_stats.avg_speed or 0.0 }} tok/s</span></div>
+                        <div>Thinking: <span class="text-slate-200">{{ "{:,}".format(cockpit_stats.thinking_tokens or 0) }} toks</span></div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Tool & Command Reliability -->
+                <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg relative overflow-hidden backdrop-blur-sm flex items-center justify-between">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-6xl font-mono text-indigo-400 select-none">⚙️</div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">SRE Tool Reliability</span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                                {{ cockpit_stats.total_commands or 0 }} executions
+                            </span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-extrabold text-indigo-300">{{ cockpit_stats.sre_pass_rate or 100.0 }}%</span>
+                            <span class="text-xs font-normal text-slate-400">pass rate</span>
+                        </div>
+                    </div>
+                    <div class="text-right text-xs text-slate-400 space-y-1 z-10 font-mono">
+                        <div>Passed: <span class="text-emerald-400 font-bold">{{ cockpit_stats.passed_commands or 0 }}</span></div>
+                        <div>Failed: <span class="text-red-400 font-bold">{{ cockpit_stats.failed_commands or 0 }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Fleet Workload Split -->
+                <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-lg relative overflow-hidden backdrop-blur-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Agent Fleet Distribution</span>
+                        <span class="text-[10px] text-slate-500 font-mono">Workload Split</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        {% for item in cockpit_stats.fleet_split %}
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
+                            <div class="flex justify-between items-center text-[11px] mb-1">
+                                <span class="font-bold 
+                                    {% if 'Claude' in item.agent_type %} text-orange-400 
+                                    {% elif 'Kimi' in item.agent_type %} text-emerald-400 
+                                    {% else %} text-purple-400 {% endif %}">
+                                    {{ item.agent_type }}
+                                </span>
+                                <span class="text-slate-400 text-[10px]">{{ item.percentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-700/60 h-1.5 rounded-full overflow-hidden mb-1">
+                                <div class="h-1.5 rounded-full 
+                                    {% if 'Claude' in item.agent_type %} bg-orange-500 
+                                    {% elif 'Kimi' in item.agent_type %} bg-emerald-500 
+                                    {% else %} bg-purple-500 {% endif %}" 
+                                    style="width: {{ item.percentage }}%">
+                                </div>
+                            </div>
+                            <div class="text-[10px] text-slate-500 text-right font-mono">{{ item.activity_count }} turns</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex items-center space-x-2 border-b border-slate-800 pb-4">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2">Filter Agent:</span>
+            <a href="/{% if query %}?q={{ query }}{% endif %}" 
+               class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all 
+               {% if not selected_agent or selected_agent == 'All' %} bg-indigo-600 text-white shadow-md shadow-indigo-600/30 {% else %} bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 {% endif %}">
+                All Agents
+            </a>
+            <a href="/?agent=Claude+Code{% if query %}&q={{ query }}{% endif %}" 
+               class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all 
+               {% if selected_agent == 'Claude Code' %} bg-orange-600 text-white shadow-md shadow-orange-600/30 {% else %} bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 {% endif %}">
+                Claude Code
+            </a>
+            <a href="/?agent=Kimi+Code{% if query %}&q={{ query }}{% endif %}" 
+               class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all 
+               {% if selected_agent == 'Kimi Code' %} bg-emerald-600 text-white shadow-md shadow-emerald-600/30 {% else %} bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 {% endif %}">
+                Kimi Code
+            </a>
+            <a href="/?agent=Agy{% if query %}&q={{ query }}{% endif %}" 
+               class="px-4 py-1.5 rounded-xl text-xs font-bold transition-all 
+               {% if selected_agent == 'Agy' %} bg-purple-600 text-white shadow-md shadow-purple-600/30 {% else %} bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 {% endif %}">
+                Agy CLI
+            </a>
+        </div>
+
+        <!-- Project Cards -->
+        <div class="space-y-8">
+            {% for proj_name, data in projects.items() %}
+            <div x-data="{ tab: 'timeline' }" class="bg-slate-800/90 rounded-2xl shadow-xl border border-slate-700/80 overflow-hidden backdrop-blur-sm">
+                <!-- Workspace Header & Meta Telemetry -->
+                <div class="px-6 py-4 bg-slate-800 border-b border-slate-700/80 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <h2 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+                                <span>📁</span> {{ proj_name }}
+                            </h2>
+                            {% for agent in data.agents %}
+                            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full 
+                                {% if 'Agy' in agent %} bg-purple-500/20 text-purple-300 border border-purple-500/30 
+                                {% elif 'Claude' in agent %} bg-orange-500/20 text-orange-300 border border-orange-500/30 
+                                {% else %} bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 {% endif %}">
+                                {{ agent }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        <p class="text-xs text-slate-400 font-mono mt-1">{{ data.path }}</p>
+                    </div>
+
+                    <!-- Project-Level Telemetry Chips -->
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="px-3 py-1.5 bg-slate-900/60 rounded-xl border border-slate-700/60 text-slate-300">
+                            <span class="text-slate-500">Spend:</span>
+                            <span class="font-bold text-emerald-400 ml-1">${{ "%.4f"|format(data.total_cost) }}</span>
+                        </div>
+                        <div class="px-3 py-1.5 bg-slate-900/60 rounded-xl border border-slate-700/60 text-slate-300">
+                            <span class="text-slate-500">Tokens:</span>
+                            <span class="font-bold font-mono text-indigo-400 ml-1">{{ "{:,}".format(data.total_tokens) }}</span>
+                        </div>
+                        {% if data.models %}
+                        <div class="px-3 py-1.5 bg-slate-900/60 rounded-xl border border-slate-700/60 text-slate-400 font-mono">
+                            {{ ", ".join(data.models) }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="px-6 border-b border-slate-700/60 bg-slate-850 flex space-x-6 text-sm">
+                    <button 
+                        @click="tab = 'timeline'" 
+                        :class="tab === 'timeline' ? 'border-indigo-500 text-indigo-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                        class="py-3 border-b-2 text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5">
+                        💬 Timeline Feed ({{ data.activities|length }})
+                    </button>
+                    <button 
+                        @click="tab = 'commands'" 
+                        :class="tab === 'commands' ? 'border-indigo-500 text-indigo-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                        class="py-3 border-b-2 text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5">
+                        ⚡ Commands & SRE ({{ data.tools|length }})
+                    </button>
+                    <button 
+                        @click="tab = 'hotspots'" 
+                        :class="tab === 'hotspots' ? 'border-indigo-500 text-indigo-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                        class="py-3 border-b-2 text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5">
+                        🔥 File Hotspots ({{ data.hotspots|length }})
+                    </button>
+                </div>
+
+                <!-- Tab 1: Timeline -->
+                <div x-show="tab === 'timeline'" class="p-6">
+                    <div class="flow-root">
+                        <ul role="list" class="-mb-8">
+                            {% for act in data.activities %}
+                            <li x-data="{ openThinking: false }">
+                                <div class="relative pb-8">
+                                    {% if not loop.last %}
+                                    <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-700" aria-hidden="true"></span>
+                                    {% endif %}
+                                    <div class="relative flex space-x-3">
+                                        <div>
+                                            {% if act.action_type in ["USER_INPUT", "CLI_COMMAND"] %}
+                                            <span class="h-8 w-8 rounded-xl flex items-center justify-center ring-4 ring-slate-800 bg-blue-600 shadow-md">
+                                                <span class="text-white text-xs">👤</span>
+                                            </span>
+                                            {% else %}
+                                            <span class="h-8 w-8 rounded-xl flex items-center justify-center ring-4 ring-slate-800 shadow-md
+                                                {% if 'Agy' in act.agent_type %} bg-purple-600 
+                                                {% elif 'Claude' in act.agent_type %} bg-orange-600 
+                                                {% else %} bg-emerald-600 {% endif %}">
+                                                <span class="text-white text-xs">🤖</span>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="min-w-0 flex-1 pt-0.5 flex flex-col md:flex-row md:justify-between space-y-2 md:space-y-0 space-x-4">
+                                            <div class="space-y-1.5">
+                                                {% if act.action_type in ["USER_INPUT", "CLI_COMMAND"] %}
+                                                    <p class="text-xs text-blue-400 font-bold">You</p>
+                                                    <div class="text-sm text-slate-200 bg-blue-950/40 p-3.5 rounded-2xl rounded-tl-sm border border-blue-800/40 shadow-sm break-words max-w-3xl leading-relaxed">
+                                                        {{ act.content | replace('\n', '<br>') | safe }}
+                                                    </div>
+                                                {% else %}
+                                                    <div class="flex items-center gap-2">
+                                                        <p class="text-xs font-bold 
+                                                            {% if 'Agy' in act.agent_type %} text-purple-400 
+                                                            {% elif 'Claude' in act.agent_type %} text-orange-400 
+                                                            {% else %} text-emerald-400 {% endif %}">
+                                                            {{ act.agent_type }}
+                                                        </p>
+                                                        {% if act.model %}
+                                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-300 font-mono">
+                                                            {{ act.model }}
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if act.first_token_latency_ms and act.first_token_latency_ms > 0 %}
+                                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/40 border border-cyan-800/40 text-cyan-300 font-mono">
+                                                            TTFT: {{ act.first_token_latency_ms }}ms
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if act.cost_usd and act.cost_usd > 0 %}
+                                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 border border-emerald-800/40 text-emerald-300 font-mono">
+                                                            ${{ "%.4f"|format(act.cost_usd) }}
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <!-- Collapsible Thinking Accordion -->
+                                                    {% if act.thinking_tokens and act.thinking_tokens > 0 %}
+                                                    <div class="mt-1 mb-2">
+                                                        <button 
+                                                            @click="openThinking = !openThinking" 
+                                                            class="text-xs text-slate-400 hover:text-slate-200 bg-slate-900/70 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
+                                                            <span>🧠</span>
+                                                            <span x-text="openThinking ? 'Hide Agent Thinking' : 'Show Agent Thinking'"></span>
+                                                            <span class="text-indigo-400 font-mono font-semibold">({{ act.thinking_tokens }} tokens)</span>
+                                                        </button>
+                                                        <div x-show="openThinking" x-cloak class="mt-2 p-3 bg-slate-950/80 border border-indigo-900/50 rounded-xl text-xs font-mono text-slate-300 leading-relaxed max-w-3xl">
+                                                            <p class="text-indigo-400 font-bold mb-1">Reasoning Process:</p>
+                                                            Deep reasoning traces captured in session logs ({{ act.thinking_tokens }} tokens allocated).
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    <div class="text-xs text-slate-300 font-mono bg-slate-900/60 p-3.5 rounded-2xl rounded-tl-sm border border-slate-700/60 shadow-inner break-words max-w-3xl leading-relaxed">
+                                                        {{ act.content | replace('\n', '<br>') | safe }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-right text-xs whitespace-nowrap text-slate-500 font-medium pt-1">
+                                                <time datetime="{{ act.timestamp }}">{{ act.timestamp[:16].replace('T', ' ') }}</time>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Commands & SRE Stream -->
+                <div x-show="tab === 'commands'" x-cloak class="p-6">
+                    {% if data.tools %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300 border border-slate-700/60 rounded-xl overflow-hidden">
+                            <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/60">
+                                <tr>
+                                    <th class="py-3 px-4">Tool</th>
+                                    <th class="py-3 px-4">Status / Exit</th>
+                                    <th class="py-3 px-4">Command / Invocation</th>
+                                    <th class="py-3 px-4">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                {% for tool in data.tools %}
+                                <tr class="hover:bg-slate-750 transition-colors">
+                                    <td class="py-2.5 px-4 font-bold text-indigo-400">{{ tool.tool_name }}</td>
+                                    <td class="py-2.5 px-4">
+                                        {% if tool.exit_code == 0 %}
+                                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                            ✔ Exit 0
+                                        </span>
+                                        {% else %}
+                                        <span class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-bold">
+                                            ❌ Exit {{ tool.exit_code }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-2.5 px-4 font-mono text-slate-200">
+                                        <span class="bg-slate-900 px-2 py-1 rounded border border-slate-700 inline-block max-w-xl truncate">
+                                            {{ tool.command or 'Executed action' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-4 text-slate-500 whitespace-nowrap">
+                                        {{ tool.timestamp[:16].replace('T', ' ') }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        No command executions recorded in this workspace.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tab 3: File Hotspots -->
+                <div x-show="tab === 'hotspots'" x-cloak class="p-6">
+                    {% if data.hotspots %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for hs in data.hotspots %}
+                        <div class="p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl flex items-center justify-between">
+                            <div class="min-w-0 flex-1 mr-4">
+                                <p class="text-xs font-mono text-slate-200 truncate" title="{{ hs.file_path }}">{{ hs.file_path }}</p>
+                                <span class="text-[10px] uppercase font-bold 
+                                    {% if 'write' in hs.operation %} text-amber-400 
+                                    {% elif 'edit' in hs.operation %} text-emerald-400 
+                                    {% else %} text-blue-400 {% endif %}">
+                                    {{ hs.operation }}
+                                </span>
+                            </div>
+                            <span class="px-2 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-mono font-bold text-xs">
+                                {{ hs.touch_count }} touches
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        No file hotspots detected yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not projects %}
+            <div class="text-center py-16 bg-slate-800/60 rounded-2xl border border-slate-700">
+                <span class="text-4xl">🔍</span>
+                <p class="text-slate-400 font-semibold mt-3">No matching agent activities found.</p>
+                {% if selected_agent or query %}
+                <a href="/" class="mt-2 inline-block text-indigo-400 hover:text-indigo-300 text-xs font-bold">Reset filters</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

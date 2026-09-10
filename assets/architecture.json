@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GroundControlAI System Architecture",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "pipeline",
+        "label": "Full Telemetry Pipeline",
+        "focus": ["claude_logs", "kimi_logs", "agy_logs", "inotify_daemon", "sqlite_db", "web_cockpit", "browser_ui"],
+        "note": "Trace agent telemetry from raw log files to real-time cyber-cockpit visualization."
+      },
+      {
+        "id": "processing",
+        "label": "Processing & Normalization",
+        "focus": ["inotify_daemon", "pricing_engine", "normalizer", "sqlite_db"],
+        "note": "Daemon ingestion pipeline calculating token economics and canonical project rollup."
+      },
+      {
+        "id": "presentation",
+        "label": "Cockpit Presentation",
+        "focus": ["sqlite_db", "web_cockpit", "browser_ui"],
+        "note": "Concurrent WAL reads for FastAPI dashboard serving real-time telemetry."
+      }
+    ]
+  },
+  "components": [
+    { "id": "claude_logs", "type": "external", "label": "Claude Code", "sublabel": "JSONL Transcripts", "brand": "anthropic", "pos": [40, 160], "size": [130, 60] },
+    { "id": "kimi_logs", "type": "external", "label": "Kimi Code", "sublabel": "Wire Stream Events", "pos": [40, 260], "size": [130, 60] },
+    { "id": "agy_logs", "type": "external", "label": "Agy CLI", "sublabel": "Brain Logs & Turns", "pos": [40, 360], "size": [130, 60] },
+
+    { "id": "inotify_daemon", "type": "backend", "label": "Collector Daemon", "sublabel": "Linux Inotify Watcher", "brand": "python", "pos": [270, 260], "size": [140, 64], "tag": "0.00% idle CPU" },
+
+    { "id": "pricing_engine", "type": "backend", "label": "Pricing Engine", "sublabel": "Multi-Vendor Rates", "pos": [470, 190], "size": [140, 60], "tag": "Cache savings" },
+    { "id": "normalizer", "type": "backend", "label": "Path Normalizer", "sublabel": "Canonical Rollup", "pos": [470, 330], "size": [140, 60], "tag": "Mono-repo" },
+
+    { "id": "sqlite_db", "type": "database", "label": "Telemetry DB", "sublabel": "SQLite WAL Mode", "brand": "sqlite", "pos": [670, 260], "size": [140, 64], "tag": "activity.db" },
+
+    { "id": "web_cockpit", "type": "backend", "label": "FastAPI Server", "sublabel": "Cyber-Cockpit :8080", "brand": "fastapi", "pos": [870, 260], "size": [140, 64], "tag": "Uvicorn" },
+    { "id": "browser_ui", "type": "frontend", "label": "Cockpit Dashboard", "sublabel": "Tailwind + Alpine.js", "pos": [1070, 260], "size": [130, 64], "tag": "Reactive" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Local Agent Telemetry (Read-Only)", "wraps": ["claude_logs", "kimi_logs", "agy_logs"], "pad": 16 },
+    { "kind": "security-group", "label": "GroundControlAI Docker Engine", "wraps": ["inotify_daemon", "pricing_engine", "normalizer", "sqlite_db", "web_cockpit"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "claude-to-daemon", "from": "claude_logs", "to": "inotify_daemon" },
+    { "id": "kimi-to-daemon", "from": "kimi_logs", "to": "inotify_daemon" },
+    { "id": "agy-to-daemon", "from": "agy_logs", "to": "inotify_daemon" },
+
+    { "id": "daemon-to-pricing", "from": "inotify_daemon", "to": "pricing_engine", "label": "tokens", "fromSide": "right", "toSide": "left" },
+    { "id": "daemon-to-normalizer", "from": "inotify_daemon", "to": "normalizer", "label": "paths", "fromSide": "right", "toSide": "left" },
+
+    { "id": "pricing-to-db", "from": "pricing_engine", "to": "sqlite_db", "label": "costs", "fromSide": "right", "toSide": "left" },
+    { "id": "normalizer-to-db", "from": "normalizer", "to": "sqlite_db", "label": "canonical", "fromSide": "right", "toSide": "left" },
+
+    { "id": "db-to-web", "from": "sqlite_db", "to": "web_cockpit", "label": "telemetry", "variant": "emphasis" },
+    { "id": "web-to-browser", "from": "web_cockpit", "to": "browser_ui", "label": "HTTP :8080", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Zero-Overhead Ingestion",
+      "items": [
+        "Linux inotify kernel watchers eliminate CPU polling loops",
+        "Incremental byte-offset tracking (f.tell()) processes events in <1ms"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Economics & Reliability",
+      "items": [
+        "Multi-vendor token rate calculation with 90% prompt cache discounts",
+        "SRE audit stream tracks command line arguments and exit codes"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Cyber-Cockpit Deck",
+      "items": [
+        "Concurrent SQLite WAL reads power high-density telemetry UI",
+        "Real-time P90 TTFT latency, token economics, and file hotspots"
+      ]
+    }
+  ]
+}
