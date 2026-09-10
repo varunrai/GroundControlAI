@@ -20,6 +20,7 @@
   <img src="https://img.shields.io/badge/SQLite-WAL_Mode-003B57?logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/TailwindCSS-v3-38B2AC?logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Alpine.js-Reactive-8BC0D0?logo=alpinedotjs&logoColor=white" alt="Alpine.js">
+  <a href="https://varunrai.github.io/GroundControlAI/"><img src="https://img.shields.io/badge/GitHub_Pages-Interactive_Architecture-blue?logo=github&logoColor=white" alt="Interactive Architecture"></a>
 </p>
 
 <p align="center">
@@ -84,10 +85,10 @@ uvicorn app:app --host 0.0.0.0 --port 8080
 ## 🛰️ System Architecture
 
 <div align="center">
-  <a href="assets/architecture.html" title="Open Interactive Archify Diagram">
+  <a href="https://varunrai.github.io/GroundControlAI/" title="Open Interactive Archify Diagram (Live on GitHub Pages)">
     <img src="assets/architecture-diagram.png" alt="GroundControlAI System Architecture" width="100%" style="border-radius: 8px; border: 1px solid #1e293b; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);" />
   </a>
-  <p><em>👉 <a href="assets/architecture.html">Open interactive standalone diagram (dark/light mode, guided views, node inspection)</a></em></p>
+  <p><em>👉 <a href="https://varunrai.github.io/GroundControlAI/"><strong>Launch Live Interactive Architecture Diagram</strong> (Dark/Light mode, Guided story views, Deep node inspection)</a></em></p>
 </div>
 
 <br/>
